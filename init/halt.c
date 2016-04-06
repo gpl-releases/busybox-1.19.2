@@ -94,6 +94,70 @@ static void write_wtmp(void)
 #define write_wtmp() ((void)0)
 #endif
 
+/* API added by CISCO to get which process invoked reboot applet */
+#if 1 //(SA_CUSTOM)
+static void get_proc_name_by_pid(void)
+{
+    static const char* logFile = "/nvram/lastSystemReboot.log";
+    static const char* procCmdline ="/proc/%d/cmdline";
+    static const char* procStat = "/proc/%d/stat";
+    FILE *fp = NULL;
+    struct timeval tval;
+    struct tm tm;
+    char proc[32];
+    char statBuf[256], pp_name[256];
+    char *proc_name;
+    pid_t pidTmp, pp_pid;
+    char temp[32], state;
+    pid_t ppid = getppid();
+    int fd = -1;
+
+    snprintf(proc, sizeof(proc), procStat, ppid);
+    fp = fopen(proc, "r");
+    if (fp == NULL){
+        printf("Error: parent process %d not exist!!!\n", ppid);
+        return;
+    }
+
+    /* Retrieve parent's parent PID */
+    bzero(statBuf, sizeof(statBuf));
+    fread(statBuf, sizeof(char), sizeof(statBuf), fp);
+    /* /proc/%d/stat format: pid %d comm %s state %c ppid %d ... */
+    sscanf(statBuf, "%d %s %c %d", &pidTmp, temp, &state, &pp_pid);
+    fclose(fp);
+    fp = NULL;
+
+    /* Retrieve parent's parent cmdline */
+    snprintf(proc, sizeof(proc), procCmdline, pp_pid);
+    fp = fopen(proc, "r");
+    if (fp == NULL){
+        printf("Error: grandfather process %d not exist!!!\n", pp_pid);
+        return;
+    }
+    bzero(pp_name, sizeof(pp_name));
+    fread(pp_name, sizeof(char), sizeof(pp_name), fp);
+    proc_name = strrchr(pp_name, '/');
+    proc_name = (proc_name == NULL)?pp_name:(proc_name+1);
+    fclose(fp);
+    fp = NULL;
+
+    printf("\nsystem reboot invoked by process %s (PID %d)\n\n", proc_name, pp_pid);
+
+    fd = open(logFile, O_CREAT|O_WRONLY|O_SYNC);
+    if (fd){
+        gettimeofday(&tval, NULL);
+        tm = *localtime(&tval.tv_sec);
+
+        bzero(statBuf, sizeof(statBuf));
+        snprintf(statBuf, sizeof(statBuf), "%04d-%02d-%02d %02d-%02d-%02d system reboot invoked by process %s (PID %d)",
+                tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday,
+                tm.tm_hour, tm.tm_min, tm.tm_sec,
+                proc_name, pp_pid);
+        write(fd, statBuf, strlen(statBuf));
+        close(fd);
+    }
+}
+#endif //(SA_CUSTOM)
 
 int halt_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
 int halt_main(int argc UNUSED_PARAM, char **argv)
@@ -147,6 +211,11 @@ int halt_main(int argc UNUSED_PARAM, char **argv)
 		if (rc) {
 			/* talk to init */
 			if (!ENABLE_FEATURE_CALL_TELINIT) {
+                /* record APPs who invoked reboot applet */
+#if 1 //(SA_CUSTOM)
+                if (which == 2)
+                    get_proc_name_by_pid();
+#endif //(SA_CUSTOM)
 				/* bbox init assumed */
 				rc = kill(1, signals[which]);
 			} else {

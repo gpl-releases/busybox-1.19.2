@@ -88,6 +88,9 @@ struct globals {
 	G.issuefile = "/etc/issue.net"; \
 } while (0)
 
+#if 1 // (SA_CUSTOM)
+struct sockaddr_in6 peer;
+#endif
 
 /*
    Remove all IAC's from buf1 (received IACs are ignored and must be removed
@@ -246,7 +249,14 @@ make_new_session(
 #if !ENABLE_FEATURE_TELNETD_STANDALONE
 	enum { sock = 0 };
 #endif
+
+#if 1//(SA_CUSTOM)
+	const char *login_argv[6] = {NULL, NULL,NULL,NULL,NULL,NULL};
+	char *connectingEntityIpAddrInString;
+#else
 	const char *login_argv[2];
+#endif
+
 	struct termios termbuf;
 	int fd, pid;
 	char tty_name[GETPTY_BUFSIZE];
@@ -374,9 +384,21 @@ make_new_session(
 	 * for vforked child to exec!) */
 	print_login_issue(G.issuefile, tty_name);
 
+#if 1// (SA_CUSTOM)
+	char addrStr[INET6_ADDRSTRLEN];
+	inet_ntop( AF_INET6, peer.sin6_addr.s6_addr, addrStr, INET6_ADDRSTRLEN);
+	connectingEntityIpAddrInString = addrStr;
 	/* Exec shell / login / whatever */
 	login_argv[0] = G.loginpath;
+	login_argv[1] = "-l";
+	login_argv[2] = "telnet";
+	login_argv[3] = "-hostEntity";
+	login_argv[4] = connectingEntityIpAddrInString;
+	login_argv[5] = NULL;
+#else
+	login_argv[0] = G.loginpath;
 	login_argv[1] = NULL;
+#endif
 	/* exec busybox applet (if PREFER_APPLETS=y), if that fails,
 	 * exec external program.
 	 * NB: sock is either 0 or has CLOEXEC set on it.
@@ -632,7 +654,20 @@ int telnetd_main(int argc UNUSED_PARAM, char **argv)
 		int fd;
 		struct tsession *new_ts;
 
+		#if 1// (SA_CUSTOM)
+		socklen_t peer_len = sizeof(peer);
+		memset(&peer, 0, sizeof(peer));
+		peer.sin6_family = AF_INET6;
+		peer.sin6_addr = in6addr_any;
+		peer.sin6_port = htons(0);
+		#endif
 		fd = accept(master_fd, NULL, NULL);
+		#if 1//(SA_CUSTOM)
+		if(fd > 0)
+		{
+    		    getpeername(fd, (struct sockaddr *)&peer, &peer_len);
+		}
+		#endif
 		if (fd < 0)
 			goto again;
 		close_on_exec_on(fd);

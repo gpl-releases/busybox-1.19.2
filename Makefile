@@ -1,3 +1,7 @@
+# 
+# Includes Intel Corporation's changes/modifications dated: [1/11/2012].
+# Changed/modified portions - Copyright © [2011], Intel Corporation.
+#
 VERSION = 1
 PATCHLEVEL = 19
 SUBLEVEL = 2
@@ -254,8 +258,8 @@ ifeq ($(KBUILD_VERBOSE),1)
   quiet =
   Q =
 else
-  quiet=quiet_
-  Q = @
+  quiet= #quiet_
+  Q = #@
 endif
 
 # If the user is running make -s (silent mode), suppress echoing of
@@ -320,8 +324,9 @@ CFLAGS		:= $(CFLAGS)
 CFLAGS_busybox	:= $(CFLAGS_busybox)
 CPPFLAGS	:= $(CPPFLAGS)
 AFLAGS		:= $(AFLAGS)
-LDFLAGS		:= $(LDFLAGS)
+LDFLAGS		:= $(LDFLAGS) 
 LDLIBS		:=
+
 
 # Read KERNELRELEASE from .kernelrelease (if it exists)
 KERNELRELEASE = $(shell cat .kernelrelease 2> /dev/null)
@@ -1012,7 +1017,7 @@ $(mrproper-dirs):
 mrproper: clean archmrproper $(mrproper-dirs)
 	$(call cmd,rmdirs)
 	$(call cmd,rmfiles)
-	@find . -name Config.src | sed 's/.src$$/.in/' | xargs -r rm -f
+	#@find . -name Config.src | sed 's/.src$$/.in/' | xargs -r rm -f
 	@find . -name Kbuild.src | sed 's/.src$$//' | xargs -r rm -f
 
 # distclean

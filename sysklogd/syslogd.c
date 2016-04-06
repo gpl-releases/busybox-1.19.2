@@ -180,7 +180,7 @@ static const struct init_globals init_data = {
 #endif
 	.logLevel = 8,
 #if ENABLE_FEATURE_ROTATE_LOGFILE
-	.logFileSize = 200 * 1024,
+	.logFileSize = 50 * 1024,
 	.logFileRotate = 1,
 #endif
 #if ENABLE_FEATURE_IPC_SYSLOG

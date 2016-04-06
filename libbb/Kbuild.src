@@ -115,6 +115,15 @@ lib-y += xgethostbyname.o
 lib-y += xreadlink.o
 lib-y += xrealloc_vector.o
 
+ifeq (1, $(SA_CUSTOM))
+lib-y += libcli_access.so
+lib-y += libdocsis_db.so
+lib-y += libticc.so
+lib-y += libsa_db.so
+lib-y += libutils_docsis.so
+lib-y += libnvramstorage.so
+endif
+
 lib-$(CONFIG_PLATFORM_LINUX) += match_fstype.o
 
 lib-$(CONFIG_FEATURE_UTMP) += utmp.o
